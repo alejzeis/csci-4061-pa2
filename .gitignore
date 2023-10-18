@@ -1,3 +1,9 @@
+# Ignored files specific to Project
+leaf_process
+nonleaf_process
+root_process
+output/*
+
 # Prerequisites
 *.d
 
