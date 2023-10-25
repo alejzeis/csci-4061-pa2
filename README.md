@@ -12,7 +12,8 @@
 - None 
 
 **Contributions:**
-- Alejandro: ```leaf_process.c```
+- Alejandro: ```leaf_process.c```, ```nonleaf_process.c```
+- Charlie: ```root_process.c```
 
 ## Plan
 1. The root process parses it's arguments, creates a pipe and forks itself. The child will call exec() on the first nonleaf_process.
