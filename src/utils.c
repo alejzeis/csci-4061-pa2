@@ -3,6 +3,21 @@
 #include "../include/utils.h"
 
 
+
+int readUntilFullOrEOF(int fd, char *buffer, int bytesToRead)
+{
+    int tempPos;
+    int pos = 0;
+
+    while ((tempPos = read(fd, buffer, bytesToRead)) > 0)
+    {
+        pos += tempPos;
+    
+    }
+
+    return pos;
+}
+
 void perfectFormat(char *buffer, const char *find, const char *replace) {
     char *occurrence = buffer;
     int find_len = strlen(find);

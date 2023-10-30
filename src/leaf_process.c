@@ -83,8 +83,7 @@ int main(int argc, char* argv[])
     //(): construct string write to pipe. The format is "<file_path>|<hash_value>"
     sprintf(strToParent, "%s|%s|", filePath, hash);
 
-    if (1) 
-    {
+#if INTER_SUBMISSION
         //(inter submission)
         //(overview): create a file in output_file_folder("output/inter_submission/root*") and write the constructed string to the file
         //(step1): extract the file_name from file_path using extract_filename() in utils.c
@@ -94,14 +93,18 @@ int main(int argc, char* argv[])
         //(step5): free any arrays that are allocated using malloc!! Free the string returned from extract_root_directory()!! It is allocated using malloc in extract_root_directory()
     
         doIntermediateSubmission(filePath, strToParent, true);
-    }
-    else
+#else
     {
-        //TODO(final submission): write the string to pipe
+        //(final submission): write the string to pipe
 
+        write(pipeWriteEnd, strToParent, strlen(strToParent));
+        close(pipeWriteEnd);
+
+        //printf("leaf exit %s\n", strToParent);
         exit(0);
 
     }
+#endif // INTER_SUBMISSION
 
     exit(0);
 }

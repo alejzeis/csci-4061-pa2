@@ -3,6 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 
+
+/**
+ * Reads from a file descriptor for a specified number of bytes or until an EOF,
+ * whichever comes first.
+ *
+ * @author Alejandro Zeise
+ */
+int readUntilFullOrEOF(int fd, char *buffer, int bytesToRead);
+
 //used in leaf_process.c for inter submission
 char* extract_filename(char* path);
 char* extract_root_directory(const char* path);

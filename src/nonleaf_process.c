@@ -6,23 +6,12 @@
 #include <string.h>
 #include <dirent.h>
 
+#include "../include/utils.h"
+
 #define BUFFER_SIZE       1024
 #define MAX_CHILD_PROCESSES 20
 
-int readUntilFullOrEOF(int fd, char *buffer, int bytesToRead);
 void traverseDir(DIR *dir, char *dirPath, int pipeToParent);
-
-int readUntilFullOrEOF(int fd, char *buffer, int bytesToRead)
-{
-    int tempPos;
-    int pos = 0;
-    while ((tempPos = read(fd, buffer, bytesToRead)) > 0)
-    {
-        pos += tempPos;
-    }
-
-    return pos;
-}
 
 void traverseDir(DIR *dir, char *dirPath, int pipeToParent)
 {
@@ -30,7 +19,7 @@ void traverseDir(DIR *dir, char *dirPath, int pipeToParent)
     int waitStatus;
     int len;
     int processCount = 0;
-    char pipeFdStr[4];
+    char pipeFdStr[9];
     char direntPath[BUFFER_SIZE];
     char pipeReadBuffers[MAX_CHILD_PROCESSES][BUFFER_SIZE];
     int pipes[MAX_CHILD_PROCESSES][2];
@@ -38,9 +27,12 @@ void traverseDir(DIR *dir, char *dirPath, int pipeToParent)
     
     while((direntry = readdir(dir)) != NULL)
     {
-        if (direntry->d_type == DT_REG || direntry->d_type == DT_DIR)
+        if ((direntry->d_type == DT_REG || direntry->d_type == DT_DIR) && strcmp(direntry->d_name, ".") != 0 && strcmp(direntry->d_name, "..") != 0)
         {
-            pipe(pipes[processCount++]);
+            int a[2];
+            pipe(a);
+            pipes[processCount][0] = a[0];
+            pipes[processCount][1] = a[1];
 
             // Convert write-end of pipe FD to string for use in exec() call
             sprintf(pipeFdStr, "%i", pipes[processCount][1]);
@@ -59,39 +51,42 @@ void traverseDir(DIR *dir, char *dirPath, int pipeToParent)
                 // Execute nonleaf or leaf process depending on if the entry is a file or directory
                 if (direntry->d_type == DT_REG)
                 {
-                    execl("./leaf_process", direntPath, pipeFdStr, NULL);
+                    execl("./leaf_process", "leaf_process", direntPath, pipeFdStr, NULL);
+                    exit(0);
                 }
                 else
                 {
-                    execl("./nonleaf_process", direntPath, pipeFdStr, NULL);
+                    execl("./nonleaf_process", "nonleaf_process", direntPath, pipeFdStr, NULL);
+                    exit(0);
                 }
             }
             else if (pids[processCount] < 0)
             {
                 fprintf(stderr, "Failed to fork() for direntry: %s\n", direntry->d_name);
+                break;
             }
             else
             {
                 // Parent
-                
                 close(pipes[processCount][1]); // Close write end of the current pipe
             }
+
+            processCount++;
         }
+    }
+
+    // Wait for all children to quit
+    for (unsigned int i = 0; i < processCount; i++)
+    {
+        waitpid(pids[i], &waitStatus, 0);
     }
 
     // Read from each open pipe, send the data to the parent
     for (unsigned int i = 0; i < processCount; i++)
     {
         len = readUntilFullOrEOF(pipes[i][0], pipeReadBuffers[i], BUFFER_SIZE);
-                   
-        write(pipeToParent, pipeReadBuffers[i], len);
-    }
-    
 
-    // Wait for all children to quit
-    for (unsigned int i = 0; i < processCount; i++)
-    {
-        waitpid(pids[i], &waitStatus, 0);
+        write(pipeToParent, pipeReadBuffers[i], len);
     }
 }
 
@@ -111,8 +106,6 @@ int main(int argc, char* argv[]) {
     pipeToParent = atoi(argv[2]);
 
 
-
-
     //(step3): open directory
     dir = opendir(dirPath);
     if (NULL == dir)
@@ -124,5 +117,8 @@ int main(int argc, char* argv[]) {
         traverseDir(dir, dirPath, pipeToParent);
     }
 
+    close(pipeToParent);
+    //printf("nonleaf exit [closed pipe %i] %s\n", pipeToParent, dirPath);
+    
     return 0;
 }
